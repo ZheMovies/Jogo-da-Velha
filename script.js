@@ -1,51 +1,35 @@
-let playerName = '';
-let currentPlayer = 'player';
 let gameBoard = ['', '', '', '', '', '', '', '', ''];
+let currentPlayer = 'player';
 let gameOver = false;
-let difficulty = 'easy';
+let playerName = '';
+let timer;
+let remainingTime = 3;  // Tempo de 3 segundos para o nível Lendário
 
 const cells = document.querySelectorAll('.cell');
-const startGameBtn = document.getElementById('start-game');
-const playerNameInput = document.getElementById('player-name');
-const gameScreen = document.getElementById('game-screen');
-const loginScreen = document.getElementById('login-screen');
-const turnMessage = document.getElementById('turn-message');
-const resetGameBtn = document.getElementById('reset-game');
-const difficultySelect = document.getElementById('difficulty');
-
-startGameBtn.addEventListener('click', startGame);
-resetGameBtn.addEventListener('click', resetGame);
-cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+const turnMessage = document.getElementById('turnMessage');
+const resetGameBtn = document.getElementById('resetGameBtn');
+const difficultySelect = document.getElementById('difficultySelect');
 
 function startGame() {
-  playerName = playerNameInput.value.trim();
-  difficulty = difficultySelect.value;
-  if (playerName) {
-    loginScreen.style.display = 'none';
-    gameScreen.style.display = 'block';
-    updateTurnMessage();
-  } else {
-    alert('Por favor, digite seu nome');
-  }
+  playerName = prompt('Qual é o seu nome?', 'Jogador');
+  turnMessage.textContent = `${playerName}, sua vez!`;
 }
 
-function handleCellClick(event) {
-  if (gameOver) return;
-
-  const index = event.target.id.replace('cell', '') - 1;
-  if (gameBoard[index] !== '') return;
-
+function makeMove(index) {
+  if (gameBoard[index] || gameOver) return;
+  
   gameBoard[index] = currentPlayer;
-  event.target.textContent = currentPlayer === 'player' ? 'X' : 'O';
+  cells[index].textContent = currentPlayer === 'player' ? 'X' : 'O';
+  
   checkWinner();
-  switchPlayer();
-}
-
-function switchPlayer() {
-  currentPlayer = currentPlayer === 'player' ? 'machine' : 'player';
-  updateTurnMessage();
-  if (currentPlayer === 'machine' && !gameOver) {
-    setTimeout(machineTurn, 1000);
+  
+  if (!gameOver) {
+    currentPlayer = currentPlayer === 'player' ? 'machine' : 'player';
+    updateTurnMessage();
+    
+    if (currentPlayer === 'machine' && !gameOver) {
+      machineMove();
+    }
   }
 }
 
@@ -53,141 +37,113 @@ function updateTurnMessage() {
   if (currentPlayer === 'player') {
     turnMessage.textContent = `${playerName}, sua vez!`;
   } else {
-    turnMessage.textContent = `Agora é a vez do Capitão Z jogar!`;
+    turnMessage.textContent = `Agora é a vez da Máquina!`;
   }
 }
 
-function machineTurn() {
-  if (gameOver) return;
-
-  let move;
-  if (difficulty === 'easy') {
-    move = easyMove();
-  } else if (difficulty === 'medium') {
-    move = mediumMove();
-  } else if (difficulty === 'hard') {
-    move = hardMove();
+function machineMove() {
+  if (difficultySelect.value === 'legendary') {
+    startLegendaryTimer();
+  } else {
+    setTimeout(() => {
+      const move = getBestMove();
+      makeMove(move);
+    }, 1000); // Máquina espera 1 segundo antes de jogar
   }
-
-  gameBoard[move] = 'machine';
-  cells[move].textContent = 'O';
-  checkWinner();
-  switchPlayer();
 }
 
-function easyMove() {
-  const availableMoves = gameBoard
-    .map((value, index) => (value === '' ? index : null))
-    .filter(index => index !== null);
-  
+function startLegendaryTimer() {
+  remainingTime = 3;
+  turnMessage.textContent = `Máquina jogando... Tempo restante: ${remainingTime}s`;
+  timer = setInterval(() => {
+    remainingTime--;
+    turnMessage.textContent = `Máquina jogando... Tempo restante: ${remainingTime}s`;
+    if (remainingTime <= 0) {
+      clearInterval(timer);
+      const move = getBestMove();
+      makeMove(move);
+    }
+  }, 1000);
+}
+
+function getBestMove() {
+  const availableMoves = gameBoard.map((cell, index) => cell === '' ? index : null).filter(index => index !== null);
+
+  // Estratégia da máquina (Média a difícil)
+  for (let i = 0; i < availableMoves.length; i++) {
+    const move = availableMoves[i];
+    const tempBoard = [...gameBoard];
+    tempBoard[move] = 'machine';
+    if (checkWin(tempBoard, 'machine')) {
+      return move;
+    }
+  }
+
+  for (let i = 0; i < availableMoves.length; i++) {
+    const move = availableMoves[i];
+    const tempBoard = [...gameBoard];
+    tempBoard[move] = 'player';
+    if (checkWin(tempBoard, 'player')) {
+      return move;
+    }
+  }
+
   return availableMoves[Math.floor(Math.random() * availableMoves.length)];
 }
 
-function mediumMove() {
-  const availableMoves = gameBoard
-    .map((value, index) => (value === '' ? index : null))
-    .filter(index => index !== null);
-
-  // Verifica se a máquina pode ganhar ou se deve bloquear o jogador
-  for (let i = 0; i < availableMoves.length; i++) {
-    const move = availableMoves[i];
-    const tempBoard = [...gameBoard];
-    tempBoard[move] = 'machine';
-    if (checkWin(tempBoard, 'machine')) {
-      return move;
-    }
-  }
-
-  // Bloqueia o jogador
-  for (let i = 0; i < availableMoves.length; i++) {
-    const move = availableMoves[i];
-    const tempBoard = [...gameBoard];
-    tempBoard[move] = 'player';
-    if (checkWin(tempBoard, 'player')) {
-      return move;
-    }
-  }
-
-  return easyMove(); // Se não houver vitória ou bloqueio, joga aleatoriamente
-}
-
-function hardMove() {
-  const availableMoves = gameBoard
-    .map((value, index) => (value === '' ? index : null))
-    .filter(index => index !== null);
-
-  for (let i = 0; i < availableMoves.length; i++) {
-    const move = availableMoves[i];
-    const tempBoard = [...gameBoard];
-    tempBoard[move] = 'machine';
-    if (checkWin(tempBoard, 'machine')) {
-      return move;
-    }
-  }
-
-  for (let i = 0; i < availableMoves.length; i++) {
-    const move = availableMoves[i];
-    const tempBoard = [...gameBoard];
-    tempBoard[move] = 'player';
-    if (checkWin(tempBoard, 'player')) {
-      return move;
-    }
-  }
-
-  return easyMove(); // Se não houver vitória ou bloqueio, joga aleatoriamente
-}
-
-function checkWin(board, player) {
-  const winningCombination = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6]
-  ];
-
-  for (const [a, b, c] of winningCombination) {
-    if (board[a] === player && board[b] === player && board[c] === player) {
-      return true;
-    }
-  }
-  return false;
-}
-
 function checkWinner() {
-  const winningCombination = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6]
+  const winningCombinations = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Horizontais
+    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Verticais
+    [0, 4, 8], [2, 4, 6]             // Diagonais
   ];
 
-  for (const [a, b, c] of winningCombination) {
+  for (const combination of winningCombinations) {
+    const [a, b, c] = combination;
     if (gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c]) {
       gameOver = true;
-      setTimeout(() => {
-        alert(gameBoard[a] === 'player' ? `${playerName} ganhou!` : 'A Máquina ganhou!');
-      }, 100);
+      turnMessage.textContent = gameBoard[a] === 'player' ? `${playerName} ganhou!` : 'A máquina ganhou!';
+      resetGameBtn.style.display = 'block';
       return;
     }
   }
 
-  if (gameBoard.every(cell => cell !== '')) {
+  if (!gameBoard.includes('')) {
     gameOver = true;
-    setTimeout(() => alert('Empate!'), 100);
+    turnMessage.textContent = 'Empate!';
+    resetGameBtn.style.display = 'block';
   }
+}
+
+function checkWin(board, player) {
+  const winningCombinations = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
+  ];
+
+  return winningCombinations.some(combination => {
+    const [a, b, c] = combination;
+    return board[a] === player && board[b] === player && board[c] === player;
+  });
 }
 
 function resetGame() {
   gameBoard = ['', '', '', '', '', '', '', '', ''];
   gameOver = false;
+  currentPlayer = 'player';
   cells.forEach(cell => cell.textContent = '');
-  startGame();
+  turnMessage.textContent = `${playerName}, sua vez!`;
+  resetGameBtn.style.display = 'none';
+  updateTurnMessage();
 }
+
+// Evento para quando o jogador clicar em uma célula
+cells.forEach((cell, index) => {
+  cell.addEventListener('click', () => makeMove(index));
+});
+
+resetGameBtn.addEventListener('click', resetGame);
+
+// Iniciar o jogo com o nome do jogador
+startGame();
