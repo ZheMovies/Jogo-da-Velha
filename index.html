@@ -13,11 +13,15 @@
     <!-- Tela de login -->
     <div id="login-screen">
       <input type="text" id="player-name" placeholder="Digite seu nome" />
-      <select id="difficulty">
-        <option value="easy">Fácil</option>
-        <option value="medium">Médio</option>
-        <option value="hard">Difícil</option>
-      </select>
+      <div class="difficulty-selector">
+        <label for="difficulty">Escolha a dificuldade:</label>
+        <select id="difficulty">
+          <option value="easy">Fácil</option>
+          <option value="medium">Médio</option>
+          <option value="hard">Difícil</option>
+          <option value="legendary">Lendário</option>
+        </select>
+      </div>
       <button id="start-game" class="btn">Entrar</button>
     </div>
 
@@ -43,4 +47,4 @@
 
   <script src="script.js"></script>
 </body>
-  </html>
+</html>
